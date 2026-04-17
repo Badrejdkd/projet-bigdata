@@ -100,6 +100,19 @@ services:
     networks:
       - bigdata-net
 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    depends_on:
+      - postgres
+    networks:
+      - bigdata-net
+
   superset:
     image: apache/superset:3.1.0
     container_name: superset
