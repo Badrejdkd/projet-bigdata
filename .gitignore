@@ -1,0 +1,12 @@
+# Logs Airflow
+logs/
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Fichiers locaux
+.env
+minio.exe
