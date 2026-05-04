@@ -7,15 +7,15 @@ import mysql.connector
 # ─── CONNEXIONS
 s3 = boto3.client(
     "s3",
-    endpoint_url="http://localhost:9000",
+    endpoint_url="http://minio:9000",
     aws_access_key_id="minioadmin",
     aws_secret_access_key="minioadmin123",
 )
 BUCKET = "datalake"
 
 conn = mysql.connector.connect(
-    host="localhost",
-    port=3307,
+    host="mysql",
+    port=3306,
     database="books_dw",
     user="bigdata",
     password="bigdata123"

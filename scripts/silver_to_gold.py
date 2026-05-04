@@ -7,9 +7,9 @@ from datetime import datetime, timezone
 #minio config
 s3 = boto3.client(
     's3',
-    endpoint_url='http://localhost:9000',
+    endpoint_url = 'http://minio:9000',
     aws_access_key_id='minioadmin',
-    aws_secret_access_key=os.getenv('MINIO_ACCESS_KEY'),
+    aws_secret_access_key= 'minioadmin123',
 )
 BUCKET  = 'datalake'
 now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

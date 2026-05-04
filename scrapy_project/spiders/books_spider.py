@@ -14,7 +14,7 @@ class BooksToScrapeSpider(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
-            self.redis_client = redis.Redis(host="localhost", port=6379, db=0)
+            self.redis_client = redis.Redis(host="redis", port=6379, db=0)
             self.redis_client.ping()
         except Exception:
             self.redis_client = None
@@ -79,7 +79,7 @@ class OpenLibrarySpider(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
-            self.redis_client = redis.Redis(host="localhost", port=6379, db=0)
+            self.redis_client = redis.Redis(host="redis", port=6379, db=0)
             self.redis_client.ping()
         except Exception:
             self.redis_client = None
@@ -161,7 +161,7 @@ class GoogleBooksSpider(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
-            self.redis_client = redis.Redis(host="localhost", port=6379, db=0)
+            self.redis_client = redis.Redis(host="redis", port=6379, db=0)
             self.redis_client.ping()
         except Exception:
             self.redis_client = None

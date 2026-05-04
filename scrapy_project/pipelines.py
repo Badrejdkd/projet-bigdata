@@ -11,7 +11,7 @@ class MinIOPipeline:
         try:
             self.client = boto3.client(
                 "s3",
-                endpoint_url="http://localhost:9000",
+                endpoint_url="http://minio:9000",
                 aws_access_key_id="minioadmin",
                 aws_secret_access_key="minioadmin123",
             )
@@ -59,13 +59,13 @@ class KafkaPipeline:
     def open_spider(self, spider):
         try:
             self.producer = KafkaProducer(
-                bootstrap_servers=["localhost:9092"],
+                bootstrap_servers=["kafka:9092"],
                 value_serializer=lambda v: json.dumps(v, ensure_ascii=False).encode("utf-8"),
                 retries=3,
             )
             spider.logger.info("[Kafka] Connexion OK")
         except Exception as e:
-            spider.logger.warning(f"[Kafka] Connexion échouée : {e}")
+            spider.logger.warning(f"[Kafka] Connexion échouée : {e}") 
             self.producer = None
 
     def process_item(self, item, spider):

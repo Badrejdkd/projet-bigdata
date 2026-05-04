@@ -7,8 +7,9 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    networks:
+      - bigdata-net
 
-  # Kafka Broker : Système de messagerie temps réel
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: kafka_broker
@@ -19,9 +20,10 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
+    networks:
+      - bigdata-net
 
   minio:
     image: minio/minio:latest
@@ -38,17 +40,18 @@ services:
     networks:
       - bigdata-net
 
-  postgres:
-    image: postgres:16
-    container_name: postgres
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
     ports:
-      - "5432:5432"
+      - "55000:3306"
     environment:
-      POSTGRES_USER: bigdata
-      POSTGRES_PASSWORD: bigdata123
-      POSTGRES_DB: books_dw
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: books_dw
+      MYSQL_USER: bigdata
+      MYSQL_PASSWORD: bigdata123
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     networks:
       - bigdata-net
 
@@ -56,7 +59,7 @@ services:
     image: redis:7-alpine
     container_name: redis
     ports:
-      - "6379:6379"
+      - "6450:6379"
     networks:
       - bigdata-net
 
@@ -64,10 +67,10 @@ services:
     image: apache/airflow:2.9.0
     container_name: airflow-webserver
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://bigdata:bigdata123@postgres/books_dw
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: mysql+mysqlconnector://bigdata:bigdata123@mysql:3306/airflow_db
       AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       _AIRFLOW_DB_MIGRATE: 'true'
@@ -75,11 +78,16 @@ services:
       _AIRFLOW_WWW_USER_USERNAME: admin
       _AIRFLOW_WWW_USER_PASSWORD: admin123
     depends_on:
-      - postgres
+      - mysql
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
-    command: webserver
+      - ./scripts:/opt/airflow/scripts
+      - ./scrapy_project:/opt/airflow/scrapy_project
+      - ./scrapy.cfg:/opt/airflow/scrapy.cfg
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: >
+      bash -c "pip install mysql-connector-python scrapy boto3 kafka-python redis && airflow webserver"
     networks:
       - bigdata-net
 
@@ -88,28 +96,50 @@ services:
     container_name: airflow-scheduler
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://bigdata:bigdata123@postgres/books_dw
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: mysql+mysqlconnector://bigdata:bigdata123@mysql:3306/airflow_db
       AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     depends_on:
-      - postgres
+      - mysql
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
-    command: scheduler
+      - ./scripts:/opt/airflow/scripts
+      - ./scrapy_project:/opt/airflow/scrapy_project
+      - ./scrapy.cfg:/opt/airflow/scrapy.cfg
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: >
+      bash -c "pip install mysql-connector-python scrapy boto3 kafka-python redis && airflow scheduler"
     networks:
       - bigdata-net
 
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin
+  streamlit:
+    image: python:3.11-slim
+    container_name: streamlit
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./streamlit_app:/app
+    command: >
+      bash -c "pip install streamlit pandas mysql-connector-python plotly &&
+               streamlit run /app/app.py --server.port=8501 --server.address=0.0.0.0"
+    depends_on:
+      - mysql
+    networks:
+      - bigdata-net
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
     ports:
       - "5050:80"
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: bigdata
+      PMA_PASSWORD: bigdata123
     depends_on:
-      - postgres
+      - mysql
     networks:
       - bigdata-net
 
@@ -117,17 +147,17 @@ services:
     image: apache/superset:3.1.0
     container_name: superset
     ports:
-      - "8088:8088"
+      - "8089:8088"
     environment:
       SUPERSET_SECRET_KEY: 'supersecretkey123'
     depends_on:
-      - postgres
+      - mysql
     networks:
       - bigdata-net
 
 volumes:
   minio_data:
-  postgres_data:
+  mysql_data:
 
 networks:
   bigdata-net:
